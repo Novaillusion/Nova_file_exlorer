@@ -230,12 +230,15 @@ private fun MainArea(
     val clipboard = LocalClipboardManager.current
 
     val openItem: (FileItem) -> Unit = { item ->
+        val isZip = !item.inArchive && Zips.isZip(item.file)
         when {
             item.isDirectory -> vm.navigateTo(item.file)
-            pick == null -> FileIntents.open(context, item.file)
+            // Like Explorer, a zip opens as a folder (unless another app is asking for a zip).
+            isZip && (pick == null || !pick.matches(item.file)) -> vm.navigateTo(item.file)
+            pick == null -> vm.materialize(listOf(item)) { FileIntents.open(context, it.first()) }
             !pick.matches(item.file) -> vm.showMessage("${typeName(item)} isn't a type this app can use")
             pick.allowMultiple -> vm.toggleSelection(item)
-            else -> onPicked(listOf(item.file))
+            else -> vm.materialize(listOf(item), onPicked)
         }
     }
     // While picking for another app, only matching files can be selected.
@@ -255,12 +258,15 @@ private fun MainArea(
     // Touch and hold = right-click menu.
     val actions = ContextActions(
         open = openItem,
-        openWith = { FileIntents.openWith(context, it.file) },
+        openWith = { item -> vm.materialize(listOf(item)) { FileIntents.openWith(context, it.first()) } },
         select = { items -> items.filter { it.path !in state.selected }.forEach(toggleItem) },
         cut = { items -> vm.copy(items.map { it.file }, cut = true) },
         copy = { items -> vm.copy(items.map { it.file }, cut = false) },
         rename = { onDialog(DialogState.Rename(it)) },
-        share = { items -> FileIntents.share(context, items.map { it.file }) },
+        share = { items -> vm.materialize(items) { FileIntents.share(context, it) } },
+        extractAll = { vm.extractAll(it.file) },
+        compress = vm::compress,
+        readOnly = state.inArchive,
         delete = { onDialog(DialogState.ConfirmDelete(it)) },
         pin = vm::pin,
         unpin = { vm.unpin(it.file) },
@@ -313,7 +319,8 @@ private fun MainArea(
                 onCopy = { vm.copySelection(cut = false) },
                 onPaste = vm::paste,
                 onRename = { vm.selectedItems().singleOrNull()?.let { onDialog(DialogState.Rename(it)) } },
-                onShare = { FileIntents.share(context, vm.selectedFiles()) },
+                onShare = { vm.materialize(vm.selectedItems()) { FileIntents.share(context, it) } },
+                onExtractAll = vm::extractCurrentArchive,
                 onDelete = { vm.selectedItems().takeIf { it.isNotEmpty() }?.let { onDialog(DialogState.ConfirmDelete(it)) } },
                 onSort = { field, asc ->
                     vm.setSort(field ?: state.sortField, asc ?: state.ascending)
@@ -339,7 +346,7 @@ private fun MainArea(
             )
         }
         HorizontalDivider(color = c.divider)
-        if (state.loading || state.searching) {
+        if (state.loading || state.searching || state.working) {
             LinearProgressIndicator(
                 modifier = Modifier.fillMaxWidth().height(2.dp),
                 color = if (state.searching) Color(0xFF16C60C) else c.accent, // Explorer's green search progress
@@ -386,7 +393,7 @@ private fun MainArea(
             OpenDialogBar(
                 pick = pick,
                 selected = vm.selectedItems(),
-                onOpen = { onPicked(vm.selectedFiles()) },
+                onOpen = { vm.materialize(vm.selectedItems(), onPicked) },
                 onCancel = onCancelPick,
             )
             HorizontalDivider(color = c.divider)

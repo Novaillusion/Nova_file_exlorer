@@ -39,6 +39,10 @@ data class UiState(
     val searching: Boolean = false,
     val canGoBack: Boolean = false,
     val canGoForward: Boolean = false,
+    /** The current folder is inside a zip archive (read-only). */
+    val inArchive: Boolean = false,
+    /** A long operation (copy, extract, compress...) is running. */
+    val working: Boolean = false,
     val message: String? = null,
 ) {
     val isHome: Boolean get() = currentDir == null
@@ -90,8 +94,21 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
             _state.update { it.copy(loading = true) }
             val vols = withContext(Dispatchers.IO) { Volumes.load(getApplication()) }
             val quick = withContext(Dispatchers.IO) { quickStore.items() }
-            val items = withContext(Dispatchers.IO) {
-                s.currentDir?.let { FileOperations.list(it, s.showHidden, s.sortField, s.ascending) } ?: emptyList()
+            val listing = withContext(Dispatchers.IO) {
+                runCatching {
+                    val dir = s.currentDir
+                    when {
+                        dir == null -> emptyList()
+                        s.inArchive -> Zips.locate(dir)
+                            ?.let { Zips.list(it, s.showHidden).sortedWith(FileOperations.comparator(s.sortField, s.ascending)) }
+                            .orEmpty()
+                        else -> FileOperations.list(dir, s.showHidden, s.sortField, s.ascending)
+                    }
+                }
+            }
+            val items = listing.getOrElse { e ->
+                _state.update { it.copy(message = e.message ?: "Can't open this folder") }
+                emptyList()
             }
             _state.update { st ->
                 st.copy(volumes = vols, quickAccess = quick, items = items, loading = false)
@@ -105,7 +122,8 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
 
     private fun go(dir: File?, record: Boolean) {
         val current = _state.value.currentDir
-        if (dir != null && (!dir.isDirectory || !dir.canRead())) {
+        val archive = dir?.let { Zips.locate(it) }
+        if (dir != null && archive == null && (!dir.isDirectory || !dir.canRead())) {
             _state.update { it.copy(message = "Can't open \"${dir.name}\"") }
             syncHistory()
             return
@@ -119,7 +137,7 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
         _state.update {
             it.copy(
                 currentDir = dir, items = emptyList(), selected = emptySet(),
-                query = "", searchResults = null, searching = false,
+                query = "", searchResults = null, searching = false, inArchive = archive != null,
             )
         }
         syncHistory()
@@ -185,6 +203,15 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
         searchJob = viewModelScope.launch {
             if (debounce) delay(300)
             _state.update { it.copy(searching = true, searchResults = emptyList(), selected = emptySet()) }
+            val zipLoc = if (s.inArchive) s.currentDir?.let { Zips.locate(it) } else null
+            if (zipLoc != null) {
+                val found = withContext(Dispatchers.IO) {
+                    runCatching { Zips.search(zipLoc, query, s.showHidden, MAX_RESULTS) }.getOrDefault(emptyList())
+                }
+                val sorted = found.sortedWith(FileOperations.comparator(s.sortField, s.ascending))
+                _state.update { it.copy(searchResults = sorted, searching = false) }
+                return@launch
+            }
             withContext(Dispatchers.IO) {
                 val found = ArrayList<FileItem>()
                 var lastEmit = 0
@@ -234,7 +261,65 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
 
     fun copy(files: List<File>, cut: Boolean) {
         if (files.isEmpty()) return
-        _state.update { it.copy(clipboard = Clipboard(files, cut), selected = emptySet()) }
+        // Items inside a zip can only be copied out (extracted), not moved.
+        val move = cut && !_state.value.inArchive
+        _state.update { it.copy(clipboard = Clipboard(files, move), selected = emptySet()) }
+    }
+
+    // ------------------------------------------------------------------ zips
+
+    /** Windows "Extract All": into a new folder next to the archive, then open it. */
+    fun extractAll(archive: File) {
+        launchOp({ runCatching { Zips.extractAll(archive) } }) { dest ->
+            navigateTo(dest)
+            "Extracted to \"${dest.name}\""
+        }
+    }
+
+    fun extractCurrentArchive() {
+        val dir = _state.value.currentDir ?: return
+        Zips.locate(dir)?.let { extractAll(it.archive) }
+    }
+
+    /** Windows "Compress to ZIP file": named after the item (or the folder for several). */
+    fun compress(items: List<FileItem>) {
+        val s = _state.value
+        val dir = s.currentDir ?: return
+        if (s.inArchive || items.isEmpty()) return
+        val first = items.first()
+        val base = when {
+            items.size > 1 -> dir.name.ifEmpty { "Archive" }
+            first.isDirectory -> first.name
+            else -> first.file.nameWithoutExtension.ifEmpty { first.name }
+        }
+        launchOp({
+            runCatching {
+                val dest = FileOperations.uniqueTarget(dir, "$base.zip")
+                try {
+                    Zips.compress(items.map { it.file }, dest)
+                } catch (e: Exception) {
+                    dest.delete()
+                    throw e
+                }
+                dest
+            }
+        }) { "Created \"${it.name}\"" }
+    }
+
+    /** Real files for [items], extracting anything inside a zip to the cache (to open or share it). */
+    fun materialize(items: List<FileItem>, onReady: (List<File>) -> Unit) {
+        if (items.isEmpty()) return
+        viewModelScope.launch {
+            _state.update { it.copy(working = true) }
+            val cache = getApplication<Application>().cacheDir
+            val result = withContext(Dispatchers.IO) {
+                runCatching { items.map { if (it.inArchive) Zips.extractToCache(it, cache) else it.file } }
+            }
+            _state.update { it.copy(working = false) }
+            result
+                .onSuccess(onReady)
+                .onFailure { e -> _state.update { it.copy(message = e.message ?: "Couldn't extract") } }
+        }
     }
 
     fun paste() {
@@ -321,7 +406,9 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
 
     private fun <T> launchOp(op: () -> Result<T>, onSuccess: (T) -> String?) {
         viewModelScope.launch {
+            _state.update { it.copy(working = true) }
             val result = withContext(Dispatchers.IO) { op() }
+            _state.update { it.copy(working = false) }
             result
                 .onSuccess { value -> onSuccess(value)?.let { msg -> _state.update { it.copy(message = msg) } } }
                 .onFailure { e -> _state.update { it.copy(message = e.message ?: "Operation failed") } }

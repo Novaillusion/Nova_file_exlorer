@@ -11,6 +11,8 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.FolderZip
+import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.PushPin
@@ -35,8 +37,12 @@ class ContextActions(
     val isPinned: (FileItem) -> Boolean,
     val copyPath: (List<FileItem>) -> Unit,
     val properties: (FileItem) -> Unit,
+    val extractAll: (FileItem) -> Unit,
+    val compress: (List<FileItem>) -> Unit,
     /** True while another app is asking us for a file: editing actions are hidden. */
     val pickMode: Boolean,
+    /** Inside a zip: only copying out, opening and sharing make sense. */
+    val readOnly: Boolean = false,
 )
 
 /**
@@ -55,19 +61,22 @@ fun ItemContextMenu(
     fun run(action: () -> Unit): () -> Unit = { onDismiss(); action() }
 
     WinMenu(expanded = true, onDismiss = onDismiss, offset = offset) {
+        val editable = !actions.readOnly
         if (!actions.pickMode) {
             Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp)) {
-                WinIconButton(Icons.Outlined.ContentCut, "Cut", run { actions.cut(targets) })
+                if (editable) WinIconButton(Icons.Outlined.ContentCut, "Cut", run { actions.cut(targets) })
                 WinIconButton(Icons.Outlined.ContentCopy, "Copy", run { actions.copy(targets) })
-                WinIconButton(
-                    Icons.Outlined.DriveFileRenameOutline, "Rename",
-                    run { single?.let(actions.rename) }, enabled = single != null,
-                )
+                if (editable) {
+                    WinIconButton(
+                        Icons.Outlined.DriveFileRenameOutline, "Rename",
+                        run { single?.let(actions.rename) }, enabled = single != null,
+                    )
+                }
                 WinIconButton(
                     Icons.Outlined.Share, "Share",
                     run { actions.share(targets) }, enabled = targets.any { !it.isDirectory },
                 )
-                WinIconButton(Icons.Outlined.Delete, "Delete", run { actions.delete(targets) })
+                if (editable) WinIconButton(Icons.Outlined.Delete, "Delete", run { actions.delete(targets) })
             }
             MenuDivider()
         }
@@ -84,7 +93,11 @@ fun ItemContextMenu(
         if (!allSelected) {
             WinMenuItem("Select", run { actions.select(targets) }, icon = Icons.Outlined.CheckBox)
         }
-        if (!actions.pickMode) {
+        if (!actions.pickMode && single != null && !single.inArchive && Zips.isZip(single.file)) {
+            WinMenuItem("Extract all…", run { actions.extractAll(single) }, icon = Icons.Outlined.Unarchive)
+        }
+        if (!actions.pickMode && editable) {
+            WinMenuItem("Compress to ZIP file", run { actions.compress(targets) }, icon = Icons.Outlined.FolderZip)
             if (single != null && single.isDirectory) {
                 if (actions.isPinned(single)) {
                     WinMenuItem("Unpin from Quick access", run { actions.unpin(single) }, icon = Icons.Outlined.PushPin)
@@ -96,10 +109,12 @@ fun ItemContextMenu(
             }
             WinMenuItem("Copy as path", run { actions.copyPath(targets) }, icon = Icons.Outlined.Link)
         }
-        MenuDivider()
-        WinMenuItem(
-            "Properties", run { single?.let(actions.properties) },
-            icon = Icons.Outlined.Info, enabled = single != null,
-        )
+        if (editable) {
+            MenuDivider()
+            WinMenuItem(
+                "Properties", run { single?.let(actions.properties) },
+                icon = Icons.Outlined.Info, enabled = single != null,
+            )
+        }
     }
 }

@@ -3,4 +3,6 @@
     <external-path name="external" path="." />
     <!-- Covers SD cards / other volumes outside primary external storage -->
     <root-path name="root" path="." />
+    <!-- Files extracted from zips so other apps can open them -->
+    <cache-path name="cache" path="." />
 </paths>

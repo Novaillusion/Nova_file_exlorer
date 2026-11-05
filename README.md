@@ -18,6 +18,9 @@ The interface is modelled on **Windows 11 File Explorer**:
 - **Details view**: Name / Date modified / Type / Size columns. Tap a column header to sort, tap again to reverse.
 - **Large icons view**: a grid with real thumbnails for images and videos.
 - **Status bar**: item and selection counts, plus Details and Large icons toggles, like Explorer.
+- **Zip files as compressed folders**: tap a `.zip` to browse it like a folder, open or share files inside it,
+  or copy things out (pasting extracts them). Use **Extract all** (in the command bar inside a zip, or the touch-and-hold menu)
+  to unpack into a new folder next to it. Choose **Compress to ZIP file** from the touch-and-hold menu to zip any selection.
 - **Properties dialog**: type, location, size (worked out for folders), contents, modified date, attributes.
 - Dark and light Fluent-style themes that follow the system setting.
 
@@ -79,6 +82,7 @@ app/src/main/java/com/example/fileexplorer/
 ├── ContextMenu.kt          touch-and-hold (right-click) menu
 ├── AssistiveTouchService.kt  floating button overlay + system actions (accessibility service)
 ├── AssistiveMenu.kt        the shortcut panel shown when the button is tapped
+├── ZipSupport.kt           browse, extract and create zip archives (java.util.zip)
 ├── WinIcons.kt             folder and drive glyphs, file type icons, thumbnails, size formatting
 ├── FileIntents.kt          open and share through FileProvider
 ├── PickerActivity.kt       "choose a file" requests from other apps

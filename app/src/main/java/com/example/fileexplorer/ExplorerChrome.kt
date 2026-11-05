@@ -60,6 +60,7 @@ import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SwapVert
 import androidx.compose.material.icons.outlined.TouchApp
+import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -485,9 +486,11 @@ fun CommandBar(
     onProperties: () -> Unit,
     onRefresh: () -> Unit,
     onAssistiveTouch: () -> Unit,
+    onExtractAll: () -> Unit,
 ) {
     val c = win
-    val inFolder = !state.isHome && state.searchResults == null
+    val inFolder = !state.isHome && state.searchResults == null && !state.inArchive
+    val editable = !state.inArchive
     val sel = state.selected.size
     val selectedHasFolder = state.shown.any { it.isDirectory && it.path in state.selected }
 
@@ -511,13 +514,17 @@ fun CommandBar(
                 WinMenuItem("Text document", { newOpen = false; onNewTextFile() }, icon = Icons.Outlined.Description)
             }
         }
+        if (state.inArchive) {
+            // Explorer shows "Extract all" in the command bar inside a compressed folder.
+            CmdButton(Icons.Outlined.Unarchive, "Extract all", "Extract all", onClick = onExtractAll)
+        }
         CmdDivider()
-        WinIconButton(Icons.Outlined.ContentCut, "Cut", onCut, enabled = sel > 0)
+        WinIconButton(Icons.Outlined.ContentCut, "Cut", onCut, enabled = sel > 0 && editable)
         WinIconButton(Icons.Outlined.ContentCopy, "Copy", onCopy, enabled = sel > 0)
         WinIconButton(Icons.Outlined.ContentPaste, "Paste", onPaste, enabled = inFolder && state.clipboard != null)
-        WinIconButton(Icons.Outlined.DriveFileRenameOutline, "Rename", onRename, enabled = sel == 1)
+        WinIconButton(Icons.Outlined.DriveFileRenameOutline, "Rename", onRename, enabled = sel == 1 && editable)
         WinIconButton(Icons.Outlined.Share, "Share", onShare, enabled = sel > 0)
-        WinIconButton(Icons.Outlined.Delete, "Delete", onDelete, enabled = sel > 0)
+        WinIconButton(Icons.Outlined.Delete, "Delete", onDelete, enabled = sel > 0 && editable)
         CmdDivider()
 
         Box {
@@ -556,9 +563,9 @@ fun CommandBar(
                 WinMenuItem("Select none", { moreOpen = false; onSelectNone() }, icon = Icons.Outlined.Deselect, enabled = sel > 0)
                 WinMenuItem("Invert selection", { moreOpen = false; onInvert() }, icon = Icons.Outlined.FlipToBack, enabled = any)
                 MenuDivider()
-                WinMenuItem("Pin to Quick access", { moreOpen = false; onPin() }, icon = Icons.Outlined.PushPin, enabled = selectedHasFolder)
+                WinMenuItem("Pin to Quick access", { moreOpen = false; onPin() }, icon = Icons.Outlined.PushPin, enabled = selectedHasFolder && editable)
                 WinMenuItem("Copy as path", { moreOpen = false; onCopyPath() }, icon = Icons.Outlined.Link, enabled = sel > 0 || !state.isHome)
-                WinMenuItem("Properties", { moreOpen = false; onProperties() }, icon = Icons.Outlined.Info, enabled = sel == 1 || (sel == 0 && !state.isHome))
+                WinMenuItem("Properties", { moreOpen = false; onProperties() }, icon = Icons.Outlined.Info, enabled = editable && (sel == 1 || (sel == 0 && !state.isHome)))
                 MenuDivider()
                 WinMenuItem("Refresh", { moreOpen = false; onRefresh() }, icon = Icons.Outlined.Refresh)
                 MenuDivider()

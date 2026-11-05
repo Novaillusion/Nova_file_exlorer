@@ -9,6 +9,8 @@ data class FileItem(
     val size: Long,
     val lastModified: Long,
     val childCount: Int?,
+    /** Lives inside a zip archive (read-only, virtual path). */
+    val inArchive: Boolean = false,
 ) {
     val path: String get() = file.absolutePath
 
@@ -102,7 +104,13 @@ object FileOperations {
     fun paste(sources: List<File>, destDir: File, move: Boolean): Result<Int> = runCatching {
         var count = 0
         for (src in sources) {
-            if (!src.exists()) continue
+            // Copying out of a zip = extracting (always a copy, never a move).
+            if (!src.exists()) {
+                val loc = Zips.locate(src) ?: continue
+                Zips.extract(loc, uniqueTarget(destDir, src.name))
+                count++
+                continue
+            }
             require(!(src.isDirectory && isSameOrInside(destDir, src))) {
                 "Can't ${if (move) "move" else "copy"} a folder into itself"
             }
@@ -131,7 +139,7 @@ object FileOperations {
         return c == p || c.startsWith(p + File.separator)
     }
 
-    private fun uniqueTarget(dir: File, name: String): File {
+    fun uniqueTarget(dir: File, name: String): File {
         var candidate = File(dir, name)
         if (!candidate.exists()) return candidate
         val dot = name.lastIndexOf('.')
