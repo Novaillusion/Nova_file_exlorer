@@ -3,14 +3,25 @@
 A file manager for Android written in Kotlin + Jetpack Compose (Material 3).
 
 ## Features
-- Browse internal storage, with tappable breadcrumbs and the system back button to go up
-- Open files in other apps (through a `FileProvider`) and share one or more files
-- Create folders, rename, and delete (folders are deleted with their contents, after a confirmation)
-- Multi-select with a long press, then copy, cut, and paste into any folder (name clashes become `name (1).ext`)
-- Sort by name, date or size, with folders always listed first
-- Show or hide hidden files, and search the current folder
-- Material You dynamic colour on Android 12+, plus dark mode
-- Remembers the current folder if Android kills the app in the background
+The interface is modelled on **Windows 11 File Explorer**:
+
+- **Address bar**: back, forward, up and refresh buttons, plus clickable breadcrumbs
+  (`This phone > Internal storage > DCIM >`). Tap the empty part of the bar to type a path.
+- **Search box**: searches the current folder and everything inside it. Results come in as they're found,
+  each with its location.
+- **Command bar**: New ▾ (folder or text document), Cut, Copy, Paste, Rename, Share, Delete, Sort ▾, View ▾,
+  and a ⋯ menu (Select all / none / invert, Pin to Quick access, Copy as path, Properties).
+- **Navigation pane**: Home, Quick access folders (Downloads, Documents, Pictures, Music, Videos, Camera, plus
+  your own pins), and *This phone* with every storage volume. It stays open on tablets and slides out on phones.
+- **Home page**: *Quick access* tiles and *Devices and drives*, with Explorer's capacity bars ("X GB free of Y GB").
+  The bars turn red when a drive is over 90% full.
+- **Details view**: Name / Date modified / Type / Size columns. Tap a column header to sort, tap again to reverse.
+- **Large icons view**: a grid with real thumbnails for images and videos.
+- **Status bar**: item and selection counts, plus Details and Large icons toggles, like Explorer.
+- **Properties dialog**: type, location, size (worked out for folders), contents, modified date, attributes.
+- Dark and light Fluent-style themes that follow the system setting.
+
+Long-press an item to start selecting (check boxes appear), then tap more items to add them.
 
 ## Requirements
 - Android Studio (Ladybug or newer), JDK 17
@@ -24,13 +35,18 @@ A file manager for Android written in Kotlin + Jetpack Compose (Material 3).
 ## Project layout
 ```
 app/src/main/java/com/example/fileexplorer/
-├── MainActivity.kt            entry point and permission gate
-├── StoragePermission.kt       permission checks and the "grant access" screen
-├── FileOperations.kt          FileItem model, sorting, and file operations (list, create, rename, delete, copy, move)
-├── FileExplorerViewModel.kt   UI state, selection, clipboard (StateFlow)
-├── FileExplorerScreen.kt      Compose UI: top bars, breadcrumbs, list, dialogs
-├── FileIntents.kt             open and share through FileProvider
-└── Theme.kt
+├── MainActivity.kt         entry point and permission gate
+├── StoragePermission.kt    permission checks and the "grant access" screen
+├── FileOperations.kt       FileItem model, sorting, and file operations (list, create, rename, delete, copy, move)
+├── StorageData.kt          storage volumes and Quick access pins
+├── ExplorerViewModel.kt    state, back/forward history, search, selection, clipboard
+├── ExplorerScreen.kt       window layout (pane + main area) and dialog routing
+├── ExplorerChrome.kt       address bar, search box, command bar, status bar, navigation pane
+├── ExplorerContent.kt      Home page, Details view, Large icons view
+├── ExplorerDialogs.kt      New / Rename / Delete / Properties dialogs
+├── WinIcons.kt             folder and drive glyphs, file type icons, thumbnails, size formatting
+├── FileIntents.kt          open and share through FileProvider
+└── Theme.kt                Windows 11 colours (dark and light)
 ```
 
 ## Notes on permissions
@@ -41,8 +57,7 @@ app/src/main/java/com/example/fileexplorer/
 - Even with All files access, Android blocks `Android/data` and `Android/obb` on 11+. Those folders appear empty.
 
 ## Ideas for next steps
-- Recursive search across subfolders
-- Thumbnails for images and videos (for example with Coil)
-- Showing SD cards and USB drives (`StorageManager.storageVolumes`)
+- Tabs, like Windows 11 Explorer
+- A Recycle Bin instead of permanent delete
 - Progress and cancel for large copies (move the work to `WorkManager`)
 - Zip and unzip

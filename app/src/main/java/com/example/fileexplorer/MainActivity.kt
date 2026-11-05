@@ -46,7 +46,7 @@ private fun AppRoot() {
     ) { granted = StoragePermission.isGranted(context) }
 
     if (granted) {
-        FileExplorerScreen()
+        ExplorerScreen()
     } else {
         PermissionScreen(
             onGrant = {

@@ -27,39 +27,36 @@ data class FileItem(
     }
 }
 
-enum class SortOrder(val label: String) {
-    NAME_ASC("Name (A–Z)"),
-    NAME_DESC("Name (Z–A)"),
-    DATE_DESC("Newest first"),
-    DATE_ASC("Oldest first"),
-    SIZE_DESC("Largest first"),
-    SIZE_ASC("Smallest first"),
+enum class SortField(val label: String) {
+    NAME("Name"),
+    DATE("Date modified"),
+    TYPE("Type"),
+    SIZE("Size"),
 }
 
 /** Plain, blocking file-system operations. Call these from Dispatchers.IO. */
 object FileOperations {
 
-    fun list(dir: File, showHidden: Boolean, sort: SortOrder): List<FileItem> {
+    fun list(dir: File, showHidden: Boolean, field: SortField, ascending: Boolean): List<FileItem> {
         val files = dir.listFiles() ?: return emptyList()
         return files.asSequence()
             .filter { showHidden || !it.isHidden }
             .map(FileItem::from)
-            .sortedWith(comparator(sort))
+            .sortedWith(comparator(field, ascending))
             .toList()
     }
 
-    private fun comparator(sort: SortOrder): Comparator<FileItem> {
+    /** Folders always stay on top, like Explorer's default grouping. */
+    fun comparator(field: SortField, ascending: Boolean): Comparator<FileItem> {
         val foldersFirst = compareByDescending<FileItem> { it.isDirectory }
         val byName = compareBy<FileItem, String>(String.CASE_INSENSITIVE_ORDER) { it.name }
-        val order = when (sort) {
-            SortOrder.NAME_ASC -> byName
-            SortOrder.NAME_DESC -> byName.reversed()
-            SortOrder.DATE_DESC -> compareByDescending<FileItem> { it.lastModified }.then(byName)
-            SortOrder.DATE_ASC -> compareBy<FileItem> { it.lastModified }.then(byName)
-            SortOrder.SIZE_DESC -> compareByDescending<FileItem> { it.size }.then(byName)
-            SortOrder.SIZE_ASC -> compareBy<FileItem> { it.size }.then(byName)
+        val primary: Comparator<FileItem> = when (field) {
+            SortField.NAME -> byName
+            SortField.DATE -> compareBy<FileItem> { it.lastModified }.then(byName)
+            SortField.TYPE -> compareBy<FileItem, String>(String.CASE_INSENSITIVE_ORDER) { it.file.extension }.then(byName)
+            SortField.SIZE -> compareBy<FileItem> { it.size }.then(byName)
         }
-        return foldersFirst.then(order)
+        return foldersFirst.then(if (ascending) primary else primary.reversed())
     }
 
     fun createFolder(parent: File, name: String): Result<File> = runCatching {
@@ -68,6 +65,22 @@ object FileOperations {
         require(!dir.exists()) { "\"$name\" already exists" }
         check(dir.mkdir()) { "Couldn't create \"$name\"" }
         dir
+    }
+
+    fun createTextFile(parent: File, name: String): Result<File> = runCatching {
+        validateName(name)
+        val file = File(parent, name)
+        require(!file.exists()) { "\"$name\" already exists" }
+        check(file.createNewFile()) { "Couldn't create \"$name\"" }
+        file
+    }
+
+    /** Next free "New folder", "New folder (2)", ... like Explorer. */
+    fun nextFreeName(parent: File, base: String, ext: String = ""): String {
+        var name = base + ext
+        var i = 2
+        while (File(parent, name).exists()) name = "$base ($i)$ext".also { i++ }
+        return name
     }
 
     fun rename(file: File, newName: String): Result<File> = runCatching {
