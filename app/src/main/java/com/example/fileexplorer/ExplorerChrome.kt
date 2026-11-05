@@ -36,7 +36,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.TabletAndroid
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -232,13 +232,13 @@ fun WinMenuItem(
 internal fun MenuDivider() = HorizontalDivider(Modifier.padding(vertical = 4.dp), color = win.divider)
 
 // ---------------------------------------------------------------------------
-// Address bar: ← → ↑ ⟳ [ This phone > Internal storage > DCIM > ]  [ Search ]
+// Address bar: ← → ↑ ⟳ [ This tablet > Internal storage > DCIM > ]  [ Search ]
 // ---------------------------------------------------------------------------
 
 private data class Crumb(val label: String, val dir: File?)
 
 private fun crumbsFor(state: UiState): List<Crumb> {
-    val list = mutableListOf(Crumb("This phone", null))
+    val list = mutableListOf(Crumb("This tablet", null))
     val dir = state.currentDir ?: return list
     val vol = state.volume
     val stop = vol?.root?.absolutePath ?: "/"
@@ -336,7 +336,7 @@ private fun AddressBox(
     ) {
         if (editing) {
             // Explorer lets you click the empty part of the address bar and type a path.
-            val initial = state.currentDir?.absolutePath ?: "This phone"
+            val initial = state.currentDir?.absolutePath ?: "This tablet"
             var text by remember { mutableStateOf(TextFieldValue(initial, TextRange(0, initial.length))) }
             val focus = remember { FocusRequester() }
             var hadFocus by remember { mutableStateOf(false) }
@@ -361,7 +361,7 @@ private fun AddressBox(
         } else {
             Spacer(Modifier.width(8.dp))
             when {
-                state.isHome -> Icon(Icons.Filled.PhoneAndroid, null, tint = c.accent, modifier = Modifier.size(16.dp))
+                state.isHome -> Icon(Icons.Filled.TabletAndroid, null, tint = c.accent, modifier = Modifier.size(16.dp))
                 state.volume?.root?.absolutePath == state.currentDir?.absolutePath -> DriveGlyph(18.dp)
                 else -> FolderGlyph(18.dp)
             }
@@ -665,11 +665,11 @@ fun NavigationPane(
         }
         PaneDivider()
         PaneItem(
-            label = "This phone",
+            label = "This tablet",
             selected = false,
             onClick = { phoneExpanded = !phoneExpanded },
             chevron = if (phoneExpanded) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            icon = { Icon(Icons.Filled.PhoneAndroid, null, tint = c.accent, modifier = Modifier.size(18.dp)) },
+            icon = { Icon(Icons.Filled.TabletAndroid, null, tint = c.accent, modifier = Modifier.size(18.dp)) },
         )
         if (phoneExpanded) {
             state.volumes.forEach { v ->

@@ -6,13 +6,13 @@ A file manager for Android written in Kotlin + Jetpack Compose (Material 3).
 The interface is modelled on **Windows 11 File Explorer**:
 
 - **Address bar**: back, forward, up and refresh buttons, plus clickable breadcrumbs
-  (`This phone > Internal storage > DCIM >`). Tap the empty part of the bar to type a path.
+  (`This tablet > Internal storage > DCIM >`). Tap the empty part of the bar to type a path.
 - **Search box**: searches the current folder and everything inside it. Results come in as they're found,
   each with its location.
 - **Command bar**: New ▾ (folder or text document), Cut, Copy, Paste, Rename, Share, Delete, Sort ▾, View ▾,
   and a ⋯ menu (Select all / none / invert, Pin to Quick access, Copy as path, Properties).
 - **Navigation pane**: Home, Quick access folders (Downloads, Documents, Pictures, Music, Videos, Camera, plus
-  your own pins), and *This phone* with every storage volume. It stays open on tablets and slides out on phones.
+  your own pins), and *This tablet* with every storage volume. It stays open on tablets and slides out on phones.
 - **Home page**: *Quick access* tiles and *Devices and drives*, with Explorer's capacity bars ("X GB free of Y GB").
   The bars turn red when a drive is over 90% full.
 - **Details view**: Name / Date modified / Type / Size columns. Tap a column header to sort, tap again to reverse.

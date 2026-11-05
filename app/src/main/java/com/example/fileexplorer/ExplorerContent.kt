@@ -147,7 +147,7 @@ private fun QuickTile(item: QuickItem, modifier: Modifier, onClick: () -> Unit) 
             Text(item.name, color = c.text, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (item.pinnedByUser) item.dir.parentFile?.name.orEmpty() else "This phone",
+                    if (item.pinnedByUser) item.dir.parentFile?.name.orEmpty() else "This tablet",
                     color = c.textSecondary, style = MaterialTheme.typography.bodySmall,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
                 )

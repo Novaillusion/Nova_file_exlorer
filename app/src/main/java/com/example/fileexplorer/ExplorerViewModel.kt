@@ -21,7 +21,7 @@ data class Clipboard(val files: List<File>, val cut: Boolean)
 enum class ViewMode { DETAILS, LARGE_ICONS }
 
 data class UiState(
-    /** null = the "This phone" page (Quick access + Devices and drives). */
+    /** null = the "This tablet" page (Quick access + Devices and drives). */
     val currentDir: File? = null,
     val volumes: List<VolumeInfo> = emptyList(),
     val quickAccess: List<QuickItem> = emptyList(),
@@ -56,7 +56,7 @@ data class UiState(
 
     val locationName: String
         get() = when {
-            currentDir == null -> "This phone"
+            currentDir == null -> "This tablet"
             volume?.root?.absolutePath == currentDir.absolutePath -> volume!!.name
             else -> currentDir.name
         }
@@ -155,7 +155,7 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
     /** Typed into the address bar. */
     fun goToPath(text: String) {
         val t = text.trim()
-        if (t.isEmpty() || t.equals("This phone", ignoreCase = true)) {
+        if (t.isEmpty() || t.equals("This tablet", ignoreCase = true)) {
             goHome()
             return
         }
