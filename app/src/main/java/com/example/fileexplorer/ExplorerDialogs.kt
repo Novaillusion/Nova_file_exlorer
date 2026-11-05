@@ -227,7 +227,7 @@ private fun PropRow(label: String, value: String) {
 
 /**
  * Bottom bar shown when another app asked us for a file, like the Windows Open dialog:
- *   File name: [photo.jpg            ]  [image/*]  [Open] [Cancel]
+ *   File name: [photo.jpg]  (file type)  [Open] [Cancel]
  */
 @Composable
 fun OpenDialogBar(
