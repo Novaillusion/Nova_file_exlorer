@@ -50,6 +50,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import java.io.File
 
 private sealed interface DialogState {
     data class NewItem(val folder: Boolean, val suggested: String) : DialogState
@@ -59,7 +60,13 @@ private sealed interface DialogState {
 }
 
 @Composable
-fun ExplorerScreen(vm: ExplorerViewModel = viewModel()) {
+fun ExplorerScreen(
+    vm: ExplorerViewModel = viewModel(),
+    pick: PickRequest? = null,
+    onPicked: (List<File>) -> Unit = {},
+    onCancelPick: () -> Unit = {},
+    startDir: File? = null,
+) {
     val state by vm.state.collectAsStateWithLifecycle()
     val c = win
     val scope = rememberCoroutineScope()
@@ -71,6 +78,15 @@ fun ExplorerScreen(vm: ExplorerViewModel = viewModel()) {
     LifecycleResumeEffect(Unit) {
         vm.refresh()
         onPauseOrDispose { }
+    }
+
+    // Another app asked us to show a specific folder.
+    var handledStart by rememberSaveable(startDir?.absolutePath) { mutableStateOf(false) }
+    LaunchedEffect(startDir) {
+        if (startDir != null && !handledStart) {
+            vm.navigateTo(startDir)
+            handledStart = true
+        }
     }
 
     LaunchedEffect(state.message) {
@@ -115,6 +131,9 @@ fun ExplorerScreen(vm: ExplorerViewModel = viewModel()) {
                 setSearchOpen = { searchOpen = it },
                 onMenu = onMenu,
                 onDialog = { dialog = it },
+                pick = pick,
+                onPicked = onPicked,
+                onCancelPick = onCancelPick,
                 modifier = m,
             )
         }
@@ -197,6 +216,9 @@ private fun MainArea(
     setSearchOpen: (Boolean) -> Unit,
     onMenu: (() -> Unit)?,
     onDialog: (DialogState) -> Unit,
+    pick: PickRequest?,
+    onPicked: (List<File>) -> Unit,
+    onCancelPick: () -> Unit,
     modifier: Modifier,
 ) {
     val c = win
@@ -204,7 +226,20 @@ private fun MainArea(
     val clipboard = LocalClipboardManager.current
 
     val openItem: (FileItem) -> Unit = { item ->
-        if (item.isDirectory) vm.navigateTo(item.file) else FileIntents.open(context, item.file)
+        when {
+            item.isDirectory -> vm.navigateTo(item.file)
+            pick == null -> FileIntents.open(context, item.file)
+            !pick.matches(item.file) -> vm.showMessage("${typeName(item)} isn't a type this app can use")
+            pick.allowMultiple -> vm.toggleSelection(item)
+            else -> onPicked(listOf(item.file))
+        }
+    }
+    // While picking for another app, only matching files can be selected.
+    val toggleItem: (FileItem) -> Unit = { item ->
+        if (pick == null || (!item.isDirectory && pick.matches(item.file))) vm.toggleSelection(item)
+    }
+    val dimmed: (FileItem) -> Boolean = { item ->
+        pick != null && !item.isDirectory && !pick.matches(item.file)
     }
 
     Column(
@@ -293,15 +328,29 @@ private fun MainArea(
                     state = state,
                     wide = !compact,
                     onOpen = openItem,
-                    onToggle = vm::toggleSelection,
+                    onToggle = toggleItem,
                     onSort = vm::sortByColumn,
+                    dimmed = dimmed,
+                    foldersAlwaysOpen = pick != null,
                 )
 
-                else -> LargeIconsView(state = state, onOpen = openItem, onToggle = vm::toggleSelection)
+                else -> LargeIconsView(
+                    state = state, onOpen = openItem, onToggle = toggleItem,
+                    dimmed = dimmed, foldersAlwaysOpen = pick != null,
+                )
             }
         }
 
         HorizontalDivider(color = c.divider)
+        if (pick != null) {
+            OpenDialogBar(
+                pick = pick,
+                selected = vm.selectedItems(),
+                onOpen = { onPicked(vm.selectedFiles()) },
+                onCancel = onCancelPick,
+            )
+            HorizontalDivider(color = c.divider)
+        }
         StatusBar(state, onViewMode = vm::setViewMode, modifier = Modifier.navigationBarsPadding())
     }
 }

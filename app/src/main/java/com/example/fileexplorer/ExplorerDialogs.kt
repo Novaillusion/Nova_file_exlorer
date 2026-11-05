@@ -1,6 +1,11 @@
 package com.example.fileexplorer
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -26,12 +31,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -213,5 +220,62 @@ private fun PropRow(label: String, value: String) {
     Row {
         Text(label, color = c.textSecondary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(96.dp))
         Text(value, color = c.text, style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/**
+ * Bottom bar shown when another app asked us for a file, like the Windows Open dialog:
+ *   File name: [photo.jpg            ]  [image/*]  [Open] [Cancel]
+ */
+@Composable
+fun OpenDialogBar(
+    pick: PickRequest,
+    selected: List<FileItem>,
+    onOpen: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val c = win
+    val names = selected.joinToString(" ") { "\"${it.name}\"" }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(c.chrome)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("File name:", color = c.text, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.width(8.dp))
+            Box(
+                Modifier
+                    .weight(1f)
+                    .height(32.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(c.field)
+                    .border(1.dp, c.fieldBorder, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                Text(
+                    names.ifEmpty { if (pick.allowMultiple) "Tap files to select them" else "Tap a file to open it" },
+                    color = if (names.isEmpty()) c.textSecondary else c.text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                pick.filterLabel, color = c.textSecondary, style = MaterialTheme.typography.bodySmall,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            WinButtons(
+                confirm = "Open",
+                onConfirm = onOpen,
+                onCancel = onCancel,
+                confirmEnabled = selected.any { !it.isDirectory },
+            )
+        }
     }
 }

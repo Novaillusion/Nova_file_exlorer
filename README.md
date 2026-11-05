@@ -23,6 +23,22 @@ The interface is modelled on **Windows 11 File Explorer**:
 
 Long-press an item to start selecting (check boxes appear), then tap more items to add them.
 
+## Using it as your main file manager
+Android has no "default file manager" setting. Instead, the app answers the standard requests other apps send:
+
+| When another app… | Android action | What happens |
+|---|---|---|
+| asks you to choose a file (attach, upload, import) | `GET_CONTENT`, `PICK` | A Windows-style **Open** dialog appears. Files that don't match the requested type are dimmed. The chosen files go back to the app with temporary read access. Multi-select works when the app allows it. |
+| wants to show a folder ("Open folder") | `VIEW` with a directory type | Opens straight to that folder. |
+| launches "the Files app" (Settings ▸ Storage, some launchers) | `MAIN` + `APP_FILES` | Opens the explorer. |
+
+The first time, Android asks which app to use. Pick **File Explorer** and tap **Always**.
+To undo that later: **Settings ▸ Apps ▸ File Explorer ▸ Open by default ▸ Clear defaults**.
+
+**Limitation:** many newer apps use `OPEN_DOCUMENT` or the photo picker. Android always routes those to its own system
+picker, and no app can take them over. In the system picker, File Explorer is still listed in the ☰ menu
+whenever the requesting app used `GET_CONTENT`.
+
 ## Requirements
 - Android Studio (Ladybug or newer), JDK 17
 - minSdk 24 (Android 7.0), target/compile SDK 35
@@ -46,6 +62,8 @@ app/src/main/java/com/example/fileexplorer/
 ├── ExplorerDialogs.kt      New / Rename / Delete / Properties dialogs
 ├── WinIcons.kt             folder and drive glyphs, file type icons, thumbnails, size formatting
 ├── FileIntents.kt          open and share through FileProvider
+├── PickerActivity.kt       "choose a file" requests from other apps
+├── PickSupport.kt          type filtering for picks; mapping "open folder" intents to paths
 └── Theme.kt                Windows 11 colours (dark and light)
 ```
 

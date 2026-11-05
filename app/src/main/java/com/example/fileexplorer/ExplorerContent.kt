@@ -46,6 +46,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -208,6 +209,8 @@ fun DetailsView(
     onOpen: (FileItem) -> Unit,
     onToggle: (FileItem) -> Unit,
     onSort: (SortField) -> Unit,
+    dimmed: (FileItem) -> Boolean = { false },
+    foldersAlwaysOpen: Boolean = false,
 ) {
     val c = win
     val inSelection = state.selected.isNotEmpty()
@@ -244,10 +247,13 @@ fun DetailsView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(if (wide) 36.dp else 54.dp)
+                        .alpha(if (dimmed(item)) 0.4f else 1f)
                         .clip(RoundedCornerShape(4.dp))
                         .background(if (selected) c.selection else Color.Transparent)
                         .combinedClickable(
-                            onClick = { if (inSelection) onToggle(item) else onOpen(item) },
+                            onClick = {
+                                if (inSelection && !(foldersAlwaysOpen && item.isDirectory)) onToggle(item) else onOpen(item)
+                            },
                             onLongClick = { onToggle(item) },
                         )
                         .padding(horizontal = 6.dp),
@@ -351,6 +357,8 @@ fun LargeIconsView(
     state: UiState,
     onOpen: (FileItem) -> Unit,
     onToggle: (FileItem) -> Unit,
+    dimmed: (FileItem) -> Boolean = { false },
+    foldersAlwaysOpen: Boolean = false,
 ) {
     val c = win
     val inSelection = state.selected.isNotEmpty()
@@ -365,10 +373,13 @@ fun LargeIconsView(
             val selected = item.path in state.selected
             Box(
                 Modifier
+                    .alpha(if (dimmed(item)) 0.4f else 1f)
                     .clip(RoundedCornerShape(4.dp))
                     .background(if (selected) c.selection else Color.Transparent)
                     .combinedClickable(
-                        onClick = { if (inSelection) onToggle(item) else onOpen(item) },
+                        onClick = {
+                            if (inSelection && !(foldersAlwaysOpen && item.isDirectory)) onToggle(item) else onOpen(item)
+                        },
                         onLongClick = { onToggle(item) },
                     )
                     .padding(6.dp)

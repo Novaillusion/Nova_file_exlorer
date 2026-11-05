@@ -1,5 +1,6 @@
 package com.example.fileexplorer
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -13,21 +14,37 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import java.io.File
 
 class MainActivity : ComponentActivity() {
+
+    /** Folder another app asked us to open ("Open folder", "Show in folder"...). */
+    private var startDir by mutableStateOf<File?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        startDir = FolderIntents.folderFrom(intent)
         setContent {
             FileExplorerTheme {
-                AppRoot()
+                AppRoot(startDir = startDir)
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        FolderIntents.folderFrom(intent)?.let { startDir = it }
     }
 }
 
 @Composable
-private fun AppRoot() {
+internal fun AppRoot(
+    pick: PickRequest? = null,
+    onPicked: (List<File>) -> Unit = {},
+    onCancelPick: () -> Unit = {},
+    startDir: File? = null,
+) {
     val context = LocalContext.current
     var granted by remember { mutableStateOf(StoragePermission.isGranted(context)) }
 
@@ -46,7 +63,7 @@ private fun AppRoot() {
     ) { granted = StoragePermission.isGranted(context) }
 
     if (granted) {
-        ExplorerScreen()
+        ExplorerScreen(pick = pick, onPicked = onPicked, onCancelPick = onCancelPick, startDir = startDir)
     } else {
         PermissionScreen(
             onGrant = {
