@@ -1,4 +1,4 @@
-# File Explorer (Android)
+# Wacom Explorer (Android)
 
 A file manager for Android written in Kotlin + Jetpack Compose (Material 3).
 
@@ -36,7 +36,7 @@ under Accessibility. A floating button then sits over every app:
 It runs as an accessibility service, because that's the only way Android lets an app draw over other apps
 *and* press Home/Back/Recents. It doesn't read screen content.
 On Android 13+ with a sideloaded APK, Android may block the switch as a *restricted setting*. To allow it,
-go to **Settings ▸ Apps ▸ File Explorer ▸ ⋮ ▸ Allow restricted settings**.
+go to **Settings ▸ Apps ▸ Wacom Explorer ▸ ⋮ ▸ Allow restricted settings**.
 Google Play only allows accessibility services that genuinely help with accessibility.
 
 ## Using it as your main file manager
@@ -48,11 +48,11 @@ Android has no "default file manager" setting. Instead, the app answers the stan
 | wants to show a folder ("Open folder") | `VIEW` with a directory type | Opens straight to that folder. |
 | launches "the Files app" (Settings ▸ Storage, some launchers) | `MAIN` + `APP_FILES` | Opens the explorer. |
 
-The first time, Android asks which app to use. Pick **File Explorer** and tap **Always**.
-To undo that later: **Settings ▸ Apps ▸ File Explorer ▸ Open by default ▸ Clear defaults**.
+The first time, Android asks which app to use. Pick **Wacom Explorer** and tap **Always**.
+To undo that later: **Settings ▸ Apps ▸ Wacom Explorer ▸ Open by default ▸ Clear defaults**.
 
 **Limitation:** many newer apps use `OPEN_DOCUMENT` or the photo picker. Android always routes those to its own system
-picker, and no app can take them over. In the system picker, File Explorer is still listed in the ☰ menu
+picker, and no app can take them over. In the system picker, Wacom Explorer is still listed in the ☰ menu
 whenever the requesting app used `GET_CONTENT`.
 
 ## Requirements

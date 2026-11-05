@@ -312,7 +312,7 @@ fun AssistiveTouchDialog(onDismiss: () -> Unit) {
                             "1. Tap Open settings\n" +
                             "2. Find Assistive Touch (under Installed or Downloaded apps)\n" +
                             "3. Switch it on and allow it\n\n" +
-                            "If Android says \"Restricted setting\": open Settings ▸ Apps ▸ File Explorer, " +
+                            "If Android says \"Restricted setting\": open Settings ▸ Apps ▸ Wacom Explorer, " +
                             "tap ⋮ ▸ Allow restricted settings, then try again.",
                         color = c.textSecondary,
                         style = MaterialTheme.typography.bodySmall,
