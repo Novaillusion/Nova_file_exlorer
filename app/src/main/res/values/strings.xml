@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">File Explorer</string>
+    <string name="assistive_touch_label">Assistive Touch</string>
+    <string name="assistive_touch_summary">Floating button with shortcuts to Home, Back, Recents, Notifications and more</string>
+    <string name="assistive_touch_description">Shows a floating button over all apps, like AssistiveTouch on iPhone. Tap it for shortcuts: Notifications, Control Center, Screenshot, Back, Home, Recents, volume and Lock screen. Drag it to move it. File Explorer only uses this service to draw the button and perform these actions; it does not read the screen or collect any data.</string>
 </resources>

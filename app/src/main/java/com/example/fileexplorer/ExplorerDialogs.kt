@@ -33,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextRange
@@ -278,4 +280,59 @@ fun OpenDialogBar(
             )
         }
     }
+}
+
+@Composable
+fun AssistiveTouchDialog(onDismiss: () -> Unit) {
+    val c = win
+    val context = LocalContext.current
+    var enabled by remember { mutableStateOf(AssistiveTouchService.isEnabled(context)) }
+    // Re-check when coming back from the Accessibility settings screen.
+    LifecycleResumeEffect(Unit) {
+        enabled = AssistiveTouchService.isEnabled(context)
+        onPauseOrDispose { }
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = DialogShape,
+        containerColor = c.chrome,
+        title = { Text("Assistive Touch") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    if (enabled) "On. The floating button is showing on your screen. Drag it to move it, tap it for shortcuts."
+                    else "Adds a floating button over all apps, like AssistiveTouch on iPhone. Tap it for Notifications, " +
+                        "Control Center, Screenshot, Back, Home, Recents, volume and Lock screen.",
+                    color = c.text,
+                )
+                if (!enabled) {
+                    Text(
+                        "To turn it on:\n" +
+                            "1. Tap Open settings\n" +
+                            "2. Find Assistive Touch (under Installed or Downloaded apps)\n" +
+                            "3. Switch it on and allow it\n\n" +
+                            "If Android says \"Restricted setting\": open Settings ▸ Apps ▸ File Explorer, " +
+                            "tap ⋮ ▸ Allow restricted settings, then try again.",
+                        color = c.textSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            WinButtons(
+                confirm = if (enabled) "Turn off" else "Open settings",
+                onConfirm = {
+                    if (enabled) {
+                        AssistiveTouchService.turnOff()
+                        enabled = false
+                    } else {
+                        AssistiveTouchService.openSettings(context)
+                    }
+                },
+                onCancel = onDismiss,
+            )
+        },
+    )
 }

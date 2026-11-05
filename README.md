@@ -26,6 +26,19 @@ The top row has quick icons (Cut, Copy, Rename, Share, Delete). Below are Open, 
 Copy as path and Properties. Hold an item inside a selection and the menu acts on every selected item.
 Choose **Select** to start multi-select (check boxes appear), then tap more items to add them.
 
+## Assistive Touch (iPhone-style floating button)
+Turn it on from the ⋯ menu ▸ **Assistive Touch…** ▸ **Open settings**, then switch on *Assistive Touch*
+under Accessibility. A floating button then sits over every app:
+
+- **Tap** it for a panel of shortcuts: Notifications, Control Center, Screenshot, Back, Home, Recents, Volume −/+, Lock screen.
+- **Drag** it anywhere. It snaps to the nearest edge, remembers its position, and fades when idle.
+
+It runs as an accessibility service, because that's the only way Android lets an app draw over other apps
+*and* press Home/Back/Recents. It doesn't read screen content.
+On Android 13+ with a sideloaded APK, Android may block the switch as a *restricted setting*. To allow it,
+go to **Settings ▸ Apps ▸ File Explorer ▸ ⋮ ▸ Allow restricted settings**.
+Google Play only allows accessibility services that genuinely help with accessibility.
+
 ## Using it as your main file manager
 Android has no "default file manager" setting. Instead, the app answers the standard requests other apps send:
 
@@ -64,6 +77,8 @@ app/src/main/java/com/example/fileexplorer/
 ├── ExplorerContent.kt      Home page, Details view, Large icons view
 ├── ExplorerDialogs.kt      New / Rename / Delete / Properties dialogs, Open-dialog bar
 ├── ContextMenu.kt          touch-and-hold (right-click) menu
+├── AssistiveTouchService.kt  floating button overlay + system actions (accessibility service)
+├── AssistiveMenu.kt        the shortcut panel shown when the button is tapped
 ├── WinIcons.kt             folder and drive glyphs, file type icons, thumbnails, size formatting
 ├── FileIntents.kt          open and share through FileProvider
 ├── PickerActivity.kt       "choose a file" requests from other apps

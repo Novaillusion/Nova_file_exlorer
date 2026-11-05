@@ -59,6 +59,7 @@ import androidx.compose.material.icons.outlined.Reorder
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -483,6 +484,7 @@ fun CommandBar(
     onCopyPath: () -> Unit,
     onProperties: () -> Unit,
     onRefresh: () -> Unit,
+    onAssistiveTouch: () -> Unit,
 ) {
     val c = win
     val inFolder = !state.isHome && state.searchResults == null
@@ -559,6 +561,8 @@ fun CommandBar(
                 WinMenuItem("Properties", { moreOpen = false; onProperties() }, icon = Icons.Outlined.Info, enabled = sel == 1 || (sel == 0 && !state.isHome))
                 MenuDivider()
                 WinMenuItem("Refresh", { moreOpen = false; onRefresh() }, icon = Icons.Outlined.Refresh)
+                MenuDivider()
+                WinMenuItem("Assistive Touch…", { moreOpen = false; onAssistiveTouch() }, icon = Icons.Outlined.TouchApp)
             }
         }
     }

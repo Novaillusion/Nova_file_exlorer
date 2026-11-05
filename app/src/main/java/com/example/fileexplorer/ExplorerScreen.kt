@@ -58,6 +58,7 @@ private sealed interface DialogState {
     data class Rename(val item: FileItem) : DialogState
     data class ConfirmDelete(val items: List<FileItem>) : DialogState
     data class Properties(val item: FileItem) : DialogState
+    data object AssistiveTouch : DialogState
 }
 
 @Composable
@@ -204,6 +205,8 @@ fun ExplorerScreen(
             onDismiss = { dialog = null },
         )
 
+        DialogState.AssistiveTouch -> AssistiveTouchDialog(onDismiss = { dialog = null })
+
         null -> Unit
     }
 }
@@ -332,6 +335,7 @@ private fun MainArea(
                     target?.let { onDialog(DialogState.Properties(it)) }
                 },
                 onRefresh = vm::refresh,
+                onAssistiveTouch = { onDialog(DialogState.AssistiveTouch) },
             )
         }
         HorizontalDivider(color = c.divider)
