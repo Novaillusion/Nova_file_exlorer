@@ -398,6 +398,11 @@ private fun MainArea(
             )
             HorizontalDivider(color = c.divider)
         }
-        StatusBar(state, onViewMode = vm::setViewMode, modifier = Modifier.navigationBarsPadding())
+        StatusBar(
+            state,
+            onViewMode = vm::setViewMode,
+            onIconScale = vm::setIconScale,
+            modifier = Modifier.navigationBarsPadding(),
+        )
     }
 }

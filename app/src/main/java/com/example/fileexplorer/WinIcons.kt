@@ -197,7 +197,8 @@ fun exactBytes(bytes: Long): String = "${grouping.format(bytes)} bytes"
 // ---------------------------------------------------------------------------
 
 private object Thumbs {
-    val cache = object : LruCache<String, Bitmap>(16 * 1024 * 1024) {
+    // Big enough for a screenful of 3x thumbnails.
+    val cache = object : LruCache<String, Bitmap>((Runtime.getRuntime().maxMemory() / 8).toInt()) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
     }
 
@@ -239,7 +240,7 @@ fun ItemIcon(item: FileItem, size: Dp, thumbnails: Boolean = false) {
 @Composable
 private fun ThumbnailOrIcon(item: FileItem, size: Dp) {
     val px = (size.value * 2.5f).toInt()
-    val thumb by produceState<ImageBitmap?>(null, item.path, item.lastModified) {
+    val thumb by produceState<ImageBitmap?>(null, item.path, item.lastModified, px) {
         value = withContext(Dispatchers.IO) { Thumbs.load(item.file, px)?.asImageBitmap() }
     }
     val t = thumb

@@ -32,6 +32,8 @@ data class UiState(
     val sortField: SortField = SortField.NAME,
     val ascending: Boolean = true,
     val viewMode: ViewMode = ViewMode.DETAILS,
+    /** Icon / thumbnail size multiplier, 1x to 3x (the status-bar slider). */
+    val iconScale: Float = 1f,
     val showHidden: Boolean = false,
     val query: String = "",
     /** Non-null while a search is active; fills in progressively. */
@@ -69,9 +71,12 @@ data class UiState(
 class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) : AndroidViewModel(app) {
 
     private val quickStore = QuickAccessStore(app)
+    private val viewPrefs = app.getSharedPreferences("view", Application.MODE_PRIVATE)
 
     private val _state = MutableStateFlow(
         UiState(
+            iconScale = viewPrefs.getFloat(KEY_SCALE, 1f).coerceIn(MIN_SCALE, MAX_SCALE),
+            viewMode = runCatching { ViewMode.valueOf(viewPrefs.getString(KEY_MODE, null)!!) }.getOrDefault(ViewMode.DETAILS),
             currentDir = saved.get<String>(KEY_DIR)
                 ?.takeIf { it.isNotEmpty() }
                 ?.let(::File)
@@ -393,7 +398,16 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
         setSort(field, if (s.sortField == field) !s.ascending else true)
     }
 
-    fun setViewMode(mode: ViewMode) = _state.update { it.copy(viewMode = mode) }
+    fun setViewMode(mode: ViewMode) {
+        _state.update { it.copy(viewMode = mode) }
+        viewPrefs.edit().putString(KEY_MODE, mode.name).apply()
+    }
+
+    fun setIconScale(scale: Float) {
+        val s = scale.coerceIn(MIN_SCALE, MAX_SCALE)
+        _state.update { it.copy(iconScale = s) }
+        viewPrefs.edit().putFloat(KEY_SCALE, s).apply()
+    }
 
     fun toggleHidden() {
         _state.update { it.copy(showHidden = !it.showHidden) }
@@ -419,5 +433,9 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
     private companion object {
         const val KEY_DIR = "current_dir"
         const val MAX_RESULTS = 1000
+        const val KEY_SCALE = "icon_scale"
+        const val KEY_MODE = "view_mode"
+        const val MIN_SCALE = 1f
+        const val MAX_SCALE = 3f
     }
 }

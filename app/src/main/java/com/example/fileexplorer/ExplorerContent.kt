@@ -228,6 +228,9 @@ fun DetailsView(
     val inSelection = state.selected.isNotEmpty()
     val searching = state.searchResults != null
     val dateFormat = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
+    // The status-bar slider scales icons (and therefore row height) from 1x to 3x.
+    val iconSize = (if (wide) 20.dp else 32.dp) * state.iconScale
+    val rowHeight = maxOf(if (wide) 36.dp else 54.dp, iconSize + if (wide) 14.dp else 20.dp)
 
     Column(Modifier.fillMaxSize()) {
         // Column headers - tap to sort, tap again to reverse, like Explorer.
@@ -259,7 +262,7 @@ fun DetailsView(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(if (wide) 36.dp else 54.dp)
+                        .height(rowHeight)
                         .alpha(if (dimmed(item)) 0.4f else 1f)
                         .clip(RoundedCornerShape(4.dp))
                         .background(if (selected) c.selection else Color.Transparent)
@@ -277,7 +280,7 @@ fun DetailsView(
                         SelectionBox(selected)
                         Spacer(Modifier.width(12.dp))
                     }
-                    ItemIcon(item, if (wide) 20.dp else 32.dp, thumbnails = !wide)
+                    ItemIcon(item, iconSize, thumbnails = !wide || state.iconScale >= 1.5f)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
@@ -380,7 +383,7 @@ fun LargeIconsView(
     val density = LocalDensity.current
     val inSelection = state.selected.isNotEmpty()
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(100.dp),
+        columns = GridCells.Adaptive(100.dp * state.iconScale),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(8.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -407,8 +410,9 @@ fun LargeIconsView(
                     Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Box(Modifier.size(68.dp), contentAlignment = Alignment.Center) {
-                        ItemIcon(item, if (item.isDirectory) 68.dp else 60.dp, thumbnails = true)
+                    val tile = 68.dp * state.iconScale
+                    Box(Modifier.size(tile), contentAlignment = Alignment.Center) {
+                        ItemIcon(item, if (item.isDirectory) tile else tile * 0.88f, thumbnails = true)
                     }
                     Spacer(Modifier.height(4.dp))
                     Text(

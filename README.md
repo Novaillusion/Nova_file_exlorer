@@ -17,7 +17,7 @@ The interface is modelled on **Windows 11 File Explorer**:
   The bars turn red when a drive is over 90% full.
 - **Details view**: Name / Date modified / Type / Size columns. Tap a column header to sort, tap again to reverse.
 - **Large icons view**: a grid with real thumbnails for images and videos.
-- **Status bar**: item and selection counts, plus Details and Large icons toggles, like Explorer.
+- **Status bar**: item and selection counts, an **icon size slider** (1× to 3×, remembered), plus Details and Large icons toggles, like Explorer.
 - **Zip files as compressed folders**: tap a `.zip` to browse it like a folder, open or share files inside it,
   or copy things out (pasting extracts them). Use **Extract all** (in the command bar inside a zip, or the touch-and-hold menu)
   to unpack into a new folder next to it. Choose **Compress to ZIP file** from the touch-and-hold menu to zip any selection.

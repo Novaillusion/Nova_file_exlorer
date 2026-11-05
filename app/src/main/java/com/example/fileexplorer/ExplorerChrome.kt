@@ -67,6 +67,12 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.material.icons.outlined.PhotoSizeSelectLarge
+import androidx.compose.material.icons.outlined.PhotoSizeSelectSmall
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -580,7 +586,12 @@ fun CommandBar(
 // ---------------------------------------------------------------------------
 
 @Composable
-fun StatusBar(state: UiState, onViewMode: (ViewMode) -> Unit, modifier: Modifier = Modifier) {
+fun StatusBar(
+    state: UiState,
+    onViewMode: (ViewMode) -> Unit,
+    onIconScale: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val c = win
     val count = if (state.isHome && state.searchResults == null) state.quickAccess.size + state.volumes.size else state.shown.size
     val selectedItems = state.shown.filter { it.path in state.selected }
@@ -593,13 +604,34 @@ fun StatusBar(state: UiState, onViewMode: (ViewMode) -> Unit, modifier: Modifier
         }
     }
     Row(
-        modifier = modifier.fillMaxWidth().height(30.dp).padding(start = 12.dp, end = 4.dp),
+        modifier = modifier.fillMaxWidth().height(40.dp).padding(start = 12.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text, style = MaterialTheme.typography.bodySmall, color = c.textSecondary,
             maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
         )
+        // Icon size slider: 1x .. 3x in quarter steps.
+        Icon(Icons.Outlined.PhotoSizeSelectSmall, contentDescription = null, tint = c.textSecondary, modifier = Modifier.size(14.dp))
+        Slider(
+            value = state.iconScale,
+            onValueChange = onIconScale,
+            valueRange = 1f..3f,
+            steps = 7,
+            colors = SliderDefaults.colors(
+                thumbColor = c.accent,
+                activeTrackColor = c.accent,
+                inactiveTrackColor = c.fieldBorder,
+                activeTickColor = Color.Transparent,
+                inactiveTickColor = Color.Transparent,
+            ),
+            modifier = Modifier
+                .width(120.dp)
+                .padding(horizontal = 4.dp)
+                .semantics { contentDescription = "Icon size" },
+        )
+        Icon(Icons.Outlined.PhotoSizeSelectLarge, contentDescription = null, tint = c.textSecondary, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
         WinIconButton(
             Icons.Outlined.Reorder, "Details", { onViewMode(ViewMode.DETAILS) }, size = 28.dp, iconSize = 16.dp,
             tint = if (state.viewMode == ViewMode.DETAILS) c.accent else c.textSecondary,
