@@ -33,7 +33,7 @@ object Volumes {
         context.getExternalFilesDirs(null).filterNotNull().forEach { dir ->
             val p = dir.absolutePath
             val i = p.indexOf("/Android/data/")
-            if (i > 0) add(File(p.substring(0, i)))
+            if (i > 0) roots.add(File(p.substring(0, i)))
         }
 
         return roots.filter { it.exists() }.map { root ->
