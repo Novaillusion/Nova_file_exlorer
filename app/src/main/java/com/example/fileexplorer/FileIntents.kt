@@ -19,7 +19,12 @@ object FileIntents {
     fun mimeType(file: File): String =
         MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: "*/*"
 
-    fun open(context: Context, file: File) {
+    fun open(context: Context, file: File) = view(context, file, chooser = false)
+
+    /** Always ask which app to use, like Explorer's "Open with". */
+    fun openWith(context: Context, file: File) = view(context, file, chooser = true)
+
+    private fun view(context: Context, file: File, chooser: Boolean) {
         val uri = try {
             uriFor(context, file)
         } catch (e: IllegalArgumentException) {
@@ -30,7 +35,7 @@ object FileIntents {
             .setDataAndType(uri, mimeType(file))
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         try {
-            context.startActivity(intent)
+            context.startActivity(if (chooser) Intent.createChooser(intent, "Open with") else intent)
         } catch (e: ActivityNotFoundException) {
             toast(context, "No app can open this file")
         }

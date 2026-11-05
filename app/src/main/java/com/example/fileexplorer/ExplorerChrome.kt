@@ -88,7 +88,9 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import java.io.File
 
@@ -172,11 +174,17 @@ private fun CmdDivider() {
 }
 
 @Composable
-fun WinMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable () -> Unit) {
+fun WinMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    offset: DpOffset = DpOffset.Zero,
+    content: @Composable () -> Unit,
+) {
     val c = win
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
+        offset = offset,
         containerColor = if (c.isDark) Color(0xFF2C2C2C) else Color(0xFFF9F9F9),
         shape = RoundedCornerShape(8.dp),
     ) { content() }
@@ -191,10 +199,17 @@ fun WinMenuItem(
     leading: (@Composable () -> Unit)? = null,
     checked: Boolean? = null,
     enabled: Boolean = true,
+    bold: Boolean = false,
 ) {
     val c = win
     DropdownMenuItem(
-        text = { Text(text, style = MaterialTheme.typography.bodyMedium, color = if (enabled) c.text else c.textDisabled) },
+        text = {
+            Text(
+                text, style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (enabled) c.text else c.textDisabled,
+            )
+        },
         onClick = onClick,
         enabled = enabled,
         leadingIcon = {
@@ -213,7 +228,7 @@ fun WinMenuItem(
 }
 
 @Composable
-private fun MenuDivider() = HorizontalDivider(Modifier.padding(vertical = 4.dp), color = win.divider)
+internal fun MenuDivider() = HorizontalDivider(Modifier.padding(vertical = 4.dp), color = win.divider)
 
 // ---------------------------------------------------------------------------
 // Address bar: ← → ↑ ⟳ [ This phone > Internal storage > DCIM > ]  [ Search ]

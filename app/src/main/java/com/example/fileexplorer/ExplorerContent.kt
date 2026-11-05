@@ -46,7 +46,17 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -209,10 +219,12 @@ fun DetailsView(
     onOpen: (FileItem) -> Unit,
     onToggle: (FileItem) -> Unit,
     onSort: (SortField) -> Unit,
+    contextMenu: @Composable (FileItem, DpOffset, () -> Unit) -> Unit,
     dimmed: (FileItem) -> Boolean = { false },
     foldersAlwaysOpen: Boolean = false,
 ) {
     val c = win
+    val density = LocalDensity.current
     val inSelection = state.selected.isNotEmpty()
     val searching = state.searchResults != null
     val dateFormat = remember { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT) }
@@ -243,6 +255,7 @@ fun DetailsView(
             items(state.shown, key = { it.path }) { item ->
                 val selected = item.path in state.selected
                 val date = dateFormat.format(Date(item.lastModified))
+                val anchor = remember { MenuAnchor() }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -250,11 +263,12 @@ fun DetailsView(
                         .alpha(if (dimmed(item)) 0.4f else 1f)
                         .clip(RoundedCornerShape(4.dp))
                         .background(if (selected) c.selection else Color.Transparent)
+                        .trackPress(anchor)
                         .combinedClickable(
                             onClick = {
                                 if (inSelection && !(foldersAlwaysOpen && item.isDirectory)) onToggle(item) else onOpen(item)
                             },
-                            onLongClick = { onToggle(item) },
+                            onLongClick = { anchor.open(density) },
                         )
                         .padding(horizontal = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -291,6 +305,7 @@ fun DetailsView(
                             Modifier.width(90.dp).padding(end = 4.dp), TextAlign.End,
                         )
                     }
+                    anchor.at?.let { at -> contextMenu(item, at) { anchor.at = null } }
                 }
             }
         }
@@ -357,10 +372,12 @@ fun LargeIconsView(
     state: UiState,
     onOpen: (FileItem) -> Unit,
     onToggle: (FileItem) -> Unit,
+    contextMenu: @Composable (FileItem, DpOffset, () -> Unit) -> Unit,
     dimmed: (FileItem) -> Boolean = { false },
     foldersAlwaysOpen: Boolean = false,
 ) {
     val c = win
+    val density = LocalDensity.current
     val inSelection = state.selected.isNotEmpty()
     LazyVerticalGrid(
         columns = GridCells.Adaptive(100.dp),
@@ -371,16 +388,18 @@ fun LargeIconsView(
     ) {
         items(state.shown, key = { it.path }) { item ->
             val selected = item.path in state.selected
+            val anchor = remember { MenuAnchor() }
             Box(
                 Modifier
                     .alpha(if (dimmed(item)) 0.4f else 1f)
                     .clip(RoundedCornerShape(4.dp))
                     .background(if (selected) c.selection else Color.Transparent)
+                    .trackPress(anchor)
                     .combinedClickable(
                         onClick = {
                             if (inSelection && !(foldersAlwaysOpen && item.isDirectory)) onToggle(item) else onOpen(item)
                         },
-                        onLongClick = { onToggle(item) },
+                        onLongClick = { anchor.open(density) },
                     )
                     .padding(6.dp)
             ) {
@@ -400,6 +419,7 @@ fun LargeIconsView(
                 if (inSelection) {
                     Box(Modifier.align(Alignment.TopStart)) { SelectionBox(selected) }
                 }
+                anchor.at?.let { at -> contextMenu(item, at) { anchor.at = null } }
             }
         }
     }
@@ -411,3 +431,27 @@ fun EmptyMessage(text: String) {
         Text(text, color = win.textSecondary, style = MaterialTheme.typography.bodyMedium)
     }
 }
+
+// ---------------------------------------------------------------------------
+// Long-press = right-click: remember where the finger went down so the
+// context menu opens right there, like a mouse right-click.
+// ---------------------------------------------------------------------------
+
+@Stable
+private class MenuAnchor {
+    var press by mutableStateOf(Offset.Zero)
+    var height by mutableIntStateOf(0)
+    var at by mutableStateOf<DpOffset?>(null)
+
+    fun open(density: Density) {
+        // DropdownMenu offsets are measured from the anchor's bottom-left corner.
+        at = with(density) { DpOffset(press.x.toDp(), (press.y - height).toDp()) }
+    }
+}
+
+private fun Modifier.trackPress(anchor: MenuAnchor): Modifier =
+    this
+        .onSizeChanged { anchor.height = it.height }
+        .pointerInput(Unit) {
+            awaitEachGesture { anchor.press = awaitFirstDown(requireUnconsumed = false).position }
+        }

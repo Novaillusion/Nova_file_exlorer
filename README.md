@@ -21,7 +21,10 @@ The interface is modelled on **Windows 11 File Explorer**:
 - **Properties dialog**: type, location, size (worked out for folders), contents, modified date, attributes.
 - Dark and light Fluent-style themes that follow the system setting.
 
-Long-press an item to start selecting (check boxes appear), then tap more items to add them.
+**Touch and hold = right-click.** Holding an item opens a Windows 11 style context menu right under your finger.
+The top row has quick icons (Cut, Copy, Rename, Share, Delete). Below are Open, Open with, Select, Pin to Quick access,
+Copy as path and Properties. Hold an item inside a selection and the menu acts on every selected item.
+Choose **Select** to start multi-select (check boxes appear), then tap more items to add them.
 
 ## Using it as your main file manager
 Android has no "default file manager" setting. Instead, the app answers the standard requests other apps send:
@@ -59,7 +62,8 @@ app/src/main/java/com/example/fileexplorer/
 ├── ExplorerScreen.kt       window layout (pane + main area) and dialog routing
 ├── ExplorerChrome.kt       address bar, search box, command bar, status bar, navigation pane
 ├── ExplorerContent.kt      Home page, Details view, Large icons view
-├── ExplorerDialogs.kt      New / Rename / Delete / Properties dialogs
+├── ExplorerDialogs.kt      New / Rename / Delete / Properties dialogs, Open-dialog bar
+├── ContextMenu.kt          touch-and-hold (right-click) menu
 ├── WinIcons.kt             folder and drive glyphs, file type icons, thumbnails, size formatting
 ├── FileIntents.kt          open and share through FileProvider
 ├── PickerActivity.kt       "choose a file" requests from other apps

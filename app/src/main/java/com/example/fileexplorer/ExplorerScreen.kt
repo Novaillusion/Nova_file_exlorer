@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -193,7 +194,7 @@ fun ExplorerScreen(
 
         is DialogState.ConfirmDelete -> DeleteDialog(
             items = d.items,
-            onConfirm = { vm.deleteSelection(); dialog = null },
+            onConfirm = { vm.delete(d.items); dialog = null },
             onDismiss = { dialog = null },
         )
 
@@ -241,6 +242,41 @@ private fun MainArea(
     val dimmed: (FileItem) -> Boolean = { item ->
         pick != null && !item.isDirectory && !pick.matches(item.file)
     }
+    val copyPaths: (List<String>) -> Unit = { paths ->
+        if (paths.isNotEmpty()) {
+            clipboard.setText(AnnotatedString(paths.joinToString("\n") { "\"$it\"" }))
+            vm.showMessage("Path copied")
+        }
+    }
+
+    // Touch and hold = right-click menu.
+    val actions = ContextActions(
+        open = openItem,
+        openWith = { FileIntents.openWith(context, it.file) },
+        select = { items -> items.filter { it.path !in state.selected }.forEach(toggleItem) },
+        cut = { items -> vm.copy(items.map { it.file }, cut = true) },
+        copy = { items -> vm.copy(items.map { it.file }, cut = false) },
+        rename = { onDialog(DialogState.Rename(it)) },
+        share = { items -> FileIntents.share(context, items.map { it.file }) },
+        delete = { onDialog(DialogState.ConfirmDelete(it)) },
+        pin = vm::pin,
+        unpin = { vm.unpin(it.file) },
+        isPinned = { vm.isPinned(it.file) },
+        copyPath = { items -> copyPaths(items.map { it.file.absolutePath }) },
+        properties = { onDialog(DialogState.Properties(it)) },
+        pickMode = pick != null,
+    )
+    val contextMenu: @Composable (FileItem, DpOffset, () -> Unit) -> Unit = { item, at, dismiss ->
+        // Like Explorer: right-clicking inside the selection acts on all selected items.
+        val targets = if (item.path in state.selected) vm.selectedItems() else listOf(item)
+        ItemContextMenu(
+            targets = targets,
+            allSelected = targets.all { it.path in state.selected },
+            offset = at,
+            actions = actions,
+            onDismiss = dismiss,
+        )
+    }
 
     Column(
         modifier
@@ -286,12 +322,10 @@ private fun MainArea(
                 onInvert = vm::invertSelection,
                 onPin = vm::pinSelection,
                 onCopyPath = {
-                    val paths = vm.selectedFiles().map { it.absolutePath }
-                        .ifEmpty { listOfNotNull(state.currentDir?.absolutePath) }
-                    if (paths.isNotEmpty()) {
-                        clipboard.setText(AnnotatedString(paths.joinToString("\n") { "\"$it\"" }))
-                        vm.showMessage("Path copied")
-                    }
+                    copyPaths(
+                        vm.selectedFiles().map { it.absolutePath }
+                            .ifEmpty { listOfNotNull(state.currentDir?.absolutePath) }
+                    )
                 },
                 onProperties = {
                     val target = vm.selectedItems().singleOrNull() ?: state.currentDir?.let(FileItem::from)
@@ -330,12 +364,14 @@ private fun MainArea(
                     onOpen = openItem,
                     onToggle = toggleItem,
                     onSort = vm::sortByColumn,
+                    contextMenu = contextMenu,
                     dimmed = dimmed,
                     foldersAlwaysOpen = pick != null,
                 )
 
                 else -> LargeIconsView(
                     state = state, onOpen = openItem, onToggle = toggleItem,
+                    contextMenu = contextMenu,
                     dimmed = dimmed, foldersAlwaysOpen = pick != null,
                 )
             }

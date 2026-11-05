@@ -230,8 +230,9 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
 
     // ------------------------------------------------------- clipboard & edits
 
-    fun copySelection(cut: Boolean) {
-        val files = selectedFiles()
+    fun copySelection(cut: Boolean) = copy(selectedFiles(), cut)
+
+    fun copy(files: List<File>, cut: Boolean) {
         if (files.isEmpty()) return
         _state.update { it.copy(clipboard = Clipboard(files, cut), selected = emptySet()) }
     }
@@ -269,20 +270,25 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
         }
     }
 
-    fun deleteSelection() {
-        val files = selectedFiles()
+    fun delete(items: List<FileItem>) {
+        val files = items.map { it.file }
         launchOp({ FileOperations.delete(files) }) {
             selectNone()
             "Deleted $it item(s)"
         }
     }
 
-    fun pinSelection() {
-        val dirs = selectedItems().filter { it.isDirectory }
+    fun pinSelection() = pin(selectedItems())
+
+    fun pin(items: List<FileItem>) {
+        val dirs = items.filter { it.isDirectory }
         dirs.forEach { quickStore.pin(it.file) }
         _state.update { it.copy(selected = emptySet(), message = "Pinned ${dirs.size} folder(s) to Quick access") }
         refresh()
     }
+
+    fun isPinned(dir: File): Boolean =
+        _state.value.quickAccess.any { it.pinnedByUser && it.dir.absolutePath == dir.absolutePath }
 
     fun unpin(dir: File) {
         quickStore.unpin(dir)
