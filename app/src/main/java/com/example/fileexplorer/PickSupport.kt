@@ -13,9 +13,18 @@ import java.io.File
 data class PickRequest(
     val allowMultiple: Boolean,
     val mimeTypes: List<String>,
+    /** File name extensions the app can use ("kra", "png"...), without dots; empty means any. */
+    val extensions: List<String> = emptyList(),
+    /** Set for a Save As request: the suggested file name. */
+    val saveName: String? = null,
+    /** Hand back document URIs with read/write access the app can keep (Krita). */
+    val documentResult: Boolean = false,
 ) {
+    val isSave: Boolean get() = saveName != null
+
     fun matches(file: File): Boolean {
-        if (mimeTypes.isEmpty()) return true
+        if (mimeTypes.isEmpty() && extensions.isEmpty()) return true
+        if (extensions.any { it.equals(file.extension, ignoreCase = true) }) return true
         val mime = FileIntents.mimeType(file)
         return mimeTypes.any { pattern ->
             when {
@@ -26,20 +35,36 @@ data class PickRequest(
         }
     }
 
-    /** Text for the "file type" box of the Open dialog, Windows style. */
+    /** Text for the "file type" box of the Open / Save As dialog, Windows style. */
     val filterLabel: String
-        get() = if (mimeTypes.isEmpty()) "All files (*.*)" else mimeTypes.joinToString(", ")
+        get() = when {
+            extensions.isNotEmpty() -> extensions.joinToString(";", prefix = "Supported files (", postfix = ")") { "*.$it" }
+            mimeTypes.isEmpty() -> "All files (*.*)"
+            else -> mimeTypes.joinToString(", ")
+        }
 
     companion object {
+        /** Extra: String[] of file name extensions (no dots) the app can open or save. */
+        const val EXTRA_EXTENSIONS = "com.example.fileexplorer.extra.EXTENSIONS"
+
         fun from(intent: Intent): PickRequest {
             val extra = intent.getStringArrayExtra(Intent.EXTRA_MIME_TYPES)?.toList().orEmpty()
             val types = (extra + listOfNotNull(intent.type))
                 .map { it.trim().lowercase() }
                 .filter { it.isNotEmpty() }
                 .distinct()
+            val extensions = intent.getStringArrayExtra(EXTRA_EXTENSIONS)?.toList().orEmpty()
+                .map { it.trim().trimStart('.', '*').lowercase() }
+                .filter { it.isNotEmpty() }
+                .distinct()
+            val save = intent.action == PickerActivity.ACTION_CREATE_DOCUMENT
+            val document = save || intent.action == PickerActivity.ACTION_OPEN_DOCUMENT
             return PickRequest(
-                allowMultiple = intent.getBooleanExtra(Intent.EXTRA_ALLOW_MULTIPLE, false),
+                allowMultiple = !save && intent.getBooleanExtra(Intent.EXTRA_ALLOW_MULTIPLE, false),
                 mimeTypes = if (types.any { it == "*/*" || it == "*" }) emptyList() else types,
+                extensions = extensions,
+                saveName = if (save) intent.getStringExtra(Intent.EXTRA_TITLE)?.takeIf { it.isNotBlank() } ?: "Untitled" else null,
+                documentResult = document,
             )
         }
     }

@@ -312,6 +312,15 @@ class ExplorerViewModel(app: Application, private val saved: SavedStateHandle) :
     }
 
     /** Real files for [items], extracting anything inside a zip to the cache (to open or share it). */
+    /** Save As: create the (empty) file the other app is going to write. */
+    fun createForSave(target: File, onReady: (List<File>) -> Unit) {
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) { runCatching { target.exists() || target.createNewFile() }.getOrDefault(false) }
+            if (ok) onReady(listOf(target))
+            else _state.update { it.copy(message = "Can't save in this folder") }
+        }
+    }
+
     fun materialize(items: List<FileItem>, onReady: (List<File>) -> Unit) {
         if (items.isEmpty()) return
         viewModelScope.launch {

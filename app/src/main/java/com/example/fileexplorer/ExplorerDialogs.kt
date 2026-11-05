@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
@@ -37,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.TextFieldValue
@@ -280,6 +282,84 @@ fun OpenDialogBar(
             )
         }
     }
+}
+
+/**
+ * Bottom bar for a Save As request, like the Windows Save As dialog:
+ *   File name: [drawing.kra        ]
+ *   Save as type: Supported files     [Save] [Cancel]
+ */
+@Composable
+fun SaveDialogBar(
+    pick: PickRequest,
+    name: String,
+    onNameChange: (String) -> Unit,
+    canSave: Boolean,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val c = win
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(c.chrome)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("File name:", color = c.text, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.width(8.dp))
+            BasicTextField(
+                value = name,
+                onValueChange = onNameChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = c.text),
+                cursorBrush = SolidColor(c.accent),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { if (canSave) onSave() }),
+                modifier = Modifier.weight(1f),
+                decorationBox = { inner ->
+                    Box(
+                        Modifier
+                            .height(32.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(c.field)
+                            .border(1.dp, c.fieldBorder, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) { inner() }
+                },
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (canSave) "Save as type: ${pick.filterLabel}" else "Open the folder to save in",
+                color = c.textSecondary, style = MaterialTheme.typography.bodySmall,
+                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            WinButtons(
+                confirm = "Save",
+                onConfirm = onSave,
+                onCancel = onCancel,
+                confirmEnabled = canSave && name.isNotBlank(),
+            )
+        }
+    }
+}
+
+/** "x already exists. Do you want to replace it?" */
+@Composable
+fun ReplaceFileDialog(name: String, onReplace: () -> Unit, onCancel: () -> Unit) {
+    val c = win
+    AlertDialog(
+        onDismissRequest = onCancel,
+        shape = DialogShape,
+        containerColor = c.chrome,
+        title = { Text("Confirm Save As") },
+        text = { Text("$name already exists.\nDo you want to replace it?", color = c.text) },
+        confirmButton = { WinButtons(confirm = "Yes", onConfirm = onReplace, onCancel = onCancel) },
+    )
 }
 
 @Composable

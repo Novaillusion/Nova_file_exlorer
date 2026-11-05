@@ -229,10 +229,52 @@ private fun MainArea(
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
 
+    // Save As (another app, e.g. Krita, asked where to save): the file name box
+    var saveName by rememberSaveable(pick?.saveName) { mutableStateOf(pick?.saveName ?: "") }
+    var confirmReplace by remember { mutableStateOf<File?>(null) }
+    val save: () -> Unit = save@{
+        val request = pick ?: return@save
+        val dir = state.currentDir
+        var name = saveName.trim()
+        when {
+            name.isEmpty() -> return@save
+            dir == null || state.inArchive || !dir.isDirectory -> {
+                vm.showMessage("Open a folder to save in")
+                return@save
+            }
+            name.contains('/') -> {
+                vm.showMessage("A file name can't contain /")
+                return@save
+            }
+        }
+        // keep the extension the app asked for if it was typed away
+        val suggested = request.saveName.orEmpty()
+        if (!name.contains('.') && suggested.contains('.')) name += "." + suggested.substringAfterLast('.')
+        val target = File(dir, name)
+        when {
+            target.isDirectory -> vm.showMessage("\"$name\" is a folder")
+            target.exists() -> confirmReplace = target
+            else -> vm.createForSave(target, onPicked)
+        }
+    }
+    confirmReplace?.let { target ->
+        ReplaceFileDialog(
+            name = target.name,
+            onReplace = {
+                confirmReplace = null
+                onPicked(listOf(target))
+            },
+            onCancel = { confirmReplace = null },
+        )
+    }
+
     val openItem: (FileItem) -> Unit = { item ->
         val isZip = !item.inArchive && Zips.isZip(item.file)
         when {
             item.isDirectory -> vm.navigateTo(item.file)
+            pick?.isSave == true && isZip -> vm.navigateTo(item.file)
+            // Save As: tapping a file takes its name, like Windows
+            pick?.isSave == true -> saveName = item.name
             // Like Explorer, a zip opens as a folder (unless another app is asking for a zip).
             isZip && (pick == null || !pick.matches(item.file)) -> vm.navigateTo(item.file)
             pick == null -> vm.materialize(listOf(item)) { FileIntents.open(context, it.first()) }
@@ -243,7 +285,10 @@ private fun MainArea(
     }
     // While picking for another app, only matching files can be selected.
     val toggleItem: (FileItem) -> Unit = { item ->
-        if (pick == null || (!item.isDirectory && pick.matches(item.file))) vm.toggleSelection(item)
+        when {
+            pick?.isSave == true -> if (!item.isDirectory) saveName = item.name
+            pick == null || (!item.isDirectory && pick.matches(item.file)) -> vm.toggleSelection(item)
+        }
     }
     val dimmed: (FileItem) -> Boolean = { item ->
         pick != null && !item.isDirectory && !pick.matches(item.file)
@@ -389,7 +434,17 @@ private fun MainArea(
         }
 
         HorizontalDivider(color = c.divider)
-        if (pick != null) {
+        if (pick?.isSave == true) {
+            SaveDialogBar(
+                pick = pick,
+                name = saveName,
+                onNameChange = { saveName = it },
+                canSave = state.currentDir != null && !state.inArchive,
+                onSave = save,
+                onCancel = onCancelPick,
+            )
+            HorizontalDivider(color = c.divider)
+        } else if (pick != null) {
             OpenDialogBar(
                 pick = pick,
                 selected = vm.selectedItems(),

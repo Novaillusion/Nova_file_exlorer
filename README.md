@@ -54,6 +54,21 @@ Android has no "default file manager" setting. Instead, the app answers the stan
 The first time, Android asks which app to use. Pick **Wacom Explorer** and tap **Always**.
 To undo that later: **Settings ▸ Apps ▸ Wacom Explorer ▸ Open by default ▸ Clear defaults**.
 
+### Open and Save As for Krita (and other apps that ask for it)
+Apps can send the explorer two requests of its own, straight to `com.example.fileexplorer/.PickerActivity`:
+
+| Action | Like | What happens |
+|---|---|---|
+| `com.example.fileexplorer.action.OPEN_DOCUMENT` | `ACTION_OPEN_DOCUMENT` | The **Open** dialog. Extras: type / `EXTRA_MIME_TYPES`, `EXTRA_ALLOW_MULTIPLE`, and `com.example.fileexplorer.extra.EXTENSIONS` (String[] such as `kra`, `png`) to dim the files the app can't use. |
+| `com.example.fileexplorer.action.CREATE_DOCUMENT` | `ACTION_CREATE_DOCUMENT` | A **Save As** dialog: go to a folder, type a name (`EXTRA_TITLE` is the suggestion, tapping a file takes its name), Save. An existing file asks before it is replaced. |
+
+The result is a document URI of the explorer's own documents provider (`com.example.fileexplorer.documents`)
+with read **and write** access the app can keep (`takePersistableUriPermission`), so it can save back to the file
+and reopen it later from its recent files. Both dialogs open in the folder used last time.
+Nova Krita uses these for File ▸ Open, Import, Save As and Export when the explorer is installed.
+
+The same documents provider also lists the explorer in Android's own file picker (☰ menu), for every app.
+
 **Limitation:** many newer apps use `OPEN_DOCUMENT` or the photo picker. Android always routes those to its own system
 picker, and no app can take them over. In the system picker, Wacom Explorer is still listed in the ☰ menu
 whenever the requesting app used `GET_CONTENT`.
