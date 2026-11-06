@@ -1,6 +1,9 @@
 package com.example.fileexplorer
 
+import android.content.Context
 import android.graphics.Bitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.graphics.drawable.toBitmap
 import android.graphics.BitmapFactory
 import android.media.ThumbnailUtils
 import android.os.Build
@@ -196,7 +199,7 @@ fun exactBytes(bytes: Long): String = "${grouping.format(bytes)} bytes"
 // Icon for a list/grid item, with real thumbnails for images & videos
 // ---------------------------------------------------------------------------
 
-private object Thumbs {
+internal object Thumbs {
     // Big enough for a screenful of 3x thumbnails.
     val cache = object : LruCache<String, Bitmap>((Runtime.getRuntime().maxMemory() / 8).toInt()) {
         override fun sizeOf(key: String, value: Bitmap) = value.byteCount
@@ -219,6 +222,22 @@ private object Thumbs {
         return bmp
     }
 
+    @Suppress("DEPRECATION")
+    fun apkIcon(context: Context, file: File, px: Int): Bitmap? {
+        val key = "apk:${file.absolutePath}:${file.lastModified()}:$px"
+        cache.get(key)?.let { return it }
+        val bmp = runCatching {
+            val pm = context.packageManager
+            val info = pm.getPackageArchiveInfo(file.absolutePath, 0)?.applicationInfo ?: return@runCatching null
+            // Point the ApplicationInfo at the APK so its resources (and icon) can be loaded.
+            info.sourceDir = file.absolutePath
+            info.publicSourceDir = file.absolutePath
+            info.loadIcon(pm).toBitmap(px, px)
+        }.getOrNull()
+        bmp?.let { cache.put(key, it) }
+        return bmp
+    }
+
     private fun decodeSampled(file: File, px: Int): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.path, bounds)
@@ -232,6 +251,7 @@ private object Thumbs {
 fun ItemIcon(item: FileItem, size: Dp, thumbnails: Boolean = false) {
     when {
         item.isDirectory -> FolderGlyph(size)
+        !item.inArchive && item.file.extension.equals("apk", ignoreCase = true) -> ApkIcon(item, size)
         thumbnails && (isImage(item.file) || isVideo(item.file)) -> ThumbnailOrIcon(item, size)
         else -> TypeIcon(item, size)
     }
@@ -251,6 +271,22 @@ private fun ThumbnailOrIcon(item: FileItem, size: Dp) {
             contentScale = ContentScale.Crop,
             modifier = Modifier.size(size).clip(RoundedCornerShape(4.dp)),
         )
+    } else {
+        TypeIcon(item, size)
+    }
+}
+
+/** The app's own launcher icon, read from inside the APK. */
+@Composable
+private fun ApkIcon(item: FileItem, size: Dp) {
+    val context = LocalContext.current
+    val px = (size.value * 2.5f).toInt().coerceAtLeast(48)
+    val icon by produceState<ImageBitmap?>(null, item.path, item.lastModified, px) {
+        value = withContext(Dispatchers.IO) { Thumbs.apkIcon(context, item.file, px)?.asImageBitmap() }
+    }
+    val i = icon
+    if (i != null) {
+        Image(bitmap = i, contentDescription = null, modifier = Modifier.size(size))
     } else {
         TypeIcon(item, size)
     }

@@ -5,6 +5,8 @@ import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.provider.Settings
 import android.webkit.MimeTypeMap
 import android.widget.Toast
 import androidx.core.content.FileProvider
@@ -16,8 +18,13 @@ object FileIntents {
     private fun uriFor(context: Context, file: File): Uri =
         FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 
+    const val APK_MIME = "application/vnd.android.package-archive"
+
+    fun isApk(file: File) = file.extension.equals("apk", ignoreCase = true)
+
     fun mimeType(file: File): String =
-        MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: "*/*"
+        if (isApk(file)) APK_MIME
+        else MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: "*/*"
 
     fun open(context: Context, file: File) = view(context, file, chooser = false)
 
@@ -25,6 +32,20 @@ object FileIntents {
     fun openWith(context: Context, file: File) = view(context, file, chooser = true)
 
     private fun view(context: Context, file: File, chooser: Boolean) {
+        // Android 8+: the system installer refuses APKs from apps that aren't allowed to install apps.
+        if (isApk(file) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O &&
+            !context.packageManager.canRequestPackageInstalls()
+        ) {
+            toast(context, "Allow \"Install unknown apps\", then tap the APK again")
+            try {
+                context.startActivity(
+                    Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
+                )
+            } catch (e: ActivityNotFoundException) {
+                StoragePermission.openAppSettings(context)
+            }
+            return
+        }
         val uri = try {
             uriFor(context, file)
         } catch (e: IllegalArgumentException) {
